@@ -30,6 +30,10 @@ const userSchema = new Schema({
         type: Boolean,
         required: true,
         default: false
+    },
+    saltRand:{
+        type: Number,
+        required: true
     }
 });
 export default mongoose.model('User', userSchema);
