@@ -14,14 +14,15 @@ export default {
 
     async signup(req, res) {
         try {
-            let rand = Math.floor((Math.random() * 786) + 54);
+            let rand = Math.floor((Math.random() * 783543556) + 54);
             host = req.get('host');
             const {
                 value,
                 error
             } = userService.validateSignup(req.body);
             if (error)
-                return res.status(400).json(error);const encryptedPass = userService.encryptPassword(value.password);
+                return res.status(400).json(error);
+            const encryptedPass = userService.encryptPassword(value.password);
             const user = await User.create({
                 email: value.email,
                 firstName: value.firstName,
@@ -56,41 +57,46 @@ export default {
     },
     async login(req, res) {
         try {
-            const { value,error } = userService.validatelogin(req.body);
-            if (error){
+            const {
+                value,
+                error
+            } = userService.validatelogin(req.body);
+            if (error) {
                 return res.status(400).json(error);
-            }
-            else { 
-        const user = await User.findOne({email: value.email});
-            if (!user) {
-                return res.status(401).json({
-                    error: "Invalid email or password"
+            } else {
+                const user = await User.findOne({
+                    email: value.email
                 });
-            }
-            else if(user.isVerified){
-               return res.status(404).json({error : 'User Email Is not verified'});
+                if (!user) {
+                    return res.status(401).json({
+                        error: "Invalid email or password"
+                    });
+                } else if (!user.isVerified) {
+                    return res.status(404).json({
+                        error: 'User Email Is not verified'
+                    });
+                } else {
+                    const authpassword = userService.comparePassword(value.password, user.password);
+                    if (!authpassword)
+                        return res.status(401).json({
+                            error: "Invalid email or password"
+                        });
+                    const token = jwt.issue({
+                        _id: user._id
+                    }, '1d');
+                    const userInfo = {
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        email: user.email,
+                        role: user.role,
+                        isVerified: user.isVerified,
+                        token: token
+                    };
+                    return res.status(200).json({
+                        user: userInfo
+                    });
                 }
-        else{
-            const authpassword = userService.comparePassword(value.password, user.password);
-            if (!authpassword)
-                return res.status(401).json({
-                    error: "Invalid email or password"
-                });
-            const token = jwt.issue({
-                _id: user._id
-            }, '1d');
-            const userInfo = {
-                firstName: user.firstName,
-                lastName: user.lastName,
-                email: user.email,
-                role: user.role,
-                token: token
-            };
-            return res.status(200).json({
-                user: userInfo
-            });
-        }
-    }
+            }
         } catch (err) {
             console.log(err);
             return res.status(500).json(err);
@@ -132,6 +138,42 @@ export default {
             return res.status(500).json(err);
         }
     },
+    async forPass(req, res) {
+
+        try {
+         console.log(req.body.email);
+         const user = await User.findOne({email : req.body.email });
+            if(!user){
+                return res.status(404).json({error : "No user Found with specific email"})
+            }
+            else{
+             link = `http://${req.get('host')}/api/users/forpassverify?id=${user.saltRand}&email=${user.email}`;
+
+                mailOptions = {
+                    to: user.email,
+                    subject: "PASSWORD HELP HERE..........",
+                    html: "Hello,<br> Please Click on the link to change your password.<br><a href=" + link + ">Click here to verify its you</a>"
+                }
+                smtpTransport.sendMail(mailOptions, function (error, response) {
+                    if (error) {
+                        res.end("error");
+                    } else {
+                        res.end("sent");
+                    }
+                });                
+            }
+        } catch (err) {
+            console.log(err);
+            return res.status(500).json(err);
+        }
+
+
+    },
+
+    async forpassverify(req, res){
+
+    },
+
     auth(req, res) {
         return res.json(req.user);
     }
