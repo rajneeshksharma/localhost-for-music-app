@@ -115,7 +115,8 @@ export default {
                             _id: user._id
                         }, {
                             $set: {
-                                isVerified: true
+                                isVerified: true,
+                                saltRand: null
                             }
                         })
                         if (user1) {
@@ -141,39 +142,91 @@ export default {
     async forPass(req, res) {
 
         try {
-         console.log(req.body.email);
-         const user = await User.findOne({email : req.body.email });
-            if(!user){
-                return res.status(404).json({error : "No user Found with specific email"})
-            }
-            else{
-             link = `http://${req.get('host')}/api/users/forpassverify?id=${user.saltRand}&email=${user.email}`;
-
-                mailOptions = {
-                    to: user.email,
-                    subject: "PASSWORD HELP HERE..........",
-                    html: "Hello,<br> Please Click on the link to change your password.<br><a href=" + link + ">Click here to verify its you</a>"
-                }
-                smtpTransport.sendMail(mailOptions, function (error, response) {
-                    if (error) {
-                        res.end("error");
-                    } else {
-                        res.end("sent");
+            console.log(req.body.email);
+            const user = await User.findOne({
+                email: req.body.email
+            });
+            if (!user) {
+                return res.status(404).json({
+                    error: "No user Found with specific email"
+                })
+            } else {
+                let rand2 = Math.floor((Math.random() * 7833556) + 545);
+                User.findByIdAndUpdate({
+                    _id: user._id
+                }, {
+                    $set: {
+                        saltRand: rand2
                     }
-                });                
+                }).then(
+                    user2 => {
+                        link = `http://localhost:4200/users/forpass?id=${rand2}&email=${user2.email}`;
+
+                        mailOptions = {
+                            to: user2.email,
+                            subject: "PASSWORD HELP HERE..........",
+                            html: "Hello,<br> Please Click on the link to change your password.<br><a href=" + link + ">Click here to verify its you</a>"
+                        }
+                        smtpTransport.sendMail(mailOptions, function (error, response) {
+                            if (error) {
+                                res.end("error");
+                            } else {
+                                res.end("sent");
+                            }
+                        });
+
+                    },
+                    err => {
+                        return res.status(404).json({
+                            error: "your details not match"
+                        });
+                    }
+                );
+
+
             }
         } catch (err) {
             console.log(err);
             return res.status(500).json(err);
         }
-
-
     },
-
-    async forpassverify(req, res){
-
+    async forpasskey(req, res) {
+        try {
+            console.log(req.body);
+            const user = await User.findOne({
+                email: req.body.email,
+                saltRand: req.body.id
+            });
+            if (!user) {
+                return res.status(404).json({
+                    error: "your details not match"
+                });
+            } else {
+                return res.status(200).json({
+                    sucess: "true"
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            return res.status(500).json(err);
+        }
     },
+    async newpass(req, res) {
+        try {
+            const encryptedPass2 = userService.encryptPassword(req.body.newPassword);
+       const userPass = await User.findOneAndUpdate({email : req.body.email}, {$set : {password : encryptedPass2, saltRand : null} });
 
+       if(!userPass){
+           res.status(404).json({error : "No user Found"});
+       }
+       else{
+           res.status(200).json({sucess : "true"});
+       }
+        } catch (err) {
+            console.error(err);
+            return res.status(500).json(err);
+        }
+    },
     auth(req, res) {
         return res.json(req.user);
     }
