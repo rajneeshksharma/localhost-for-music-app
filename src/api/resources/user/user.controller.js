@@ -214,14 +214,106 @@ export default {
     async newpass(req, res) {
         try {
             const encryptedPass2 = userService.encryptPassword(req.body.newPassword);
-       const userPass = await User.findOneAndUpdate({email : req.body.email}, {$set : {password : encryptedPass2, saltRand : null} });
+            const userPass = await User.findOneAndUpdate({
+                email: req.body.email
+            }, {
+                $set: {
+                    password: encryptedPass2,
+                    saltRand: null
+                }
+            });
 
-       if(!userPass){
-           res.status(404).json({error : "No user Found"});
-       }
-       else{
-           res.status(200).json({sucess : "true"});
-       }
+            if (!userPass) {
+                res.status(404).json({
+                    error: "No user Found"
+                });
+            } else {
+                res.status(200).json({
+                    sucess: "true"
+                });
+            }
+        } catch (err) {
+            console.error(err);
+            return res.status(500).json(err);
+        }
+    },
+    async socialcontrol(req, res) {
+        try {
+            const {
+                value,
+                error
+            } = userService.validateSocialControl(req.body);
+            if (error) {
+                return res.status(400).json(error);
+            } else {
+                const user = await User.findOne({
+                    social_id: value.social_id
+                });
+                if (user) {
+                    const tokenx = jwt.issue({
+                        _id: user._id
+                    }, '1d');
+                    const userInfox = {
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        email: user.email,
+                        role: user.role,
+                        isVerified: user.isVerified,
+                        token: tokenx
+                    };
+                    return res.status(200).json({
+                        user: userInfox
+                    });
+                } else {
+
+                    const user2 = await User.create({
+                        email: value.email,
+                        firstName: value.firstName,
+                        lastName: value.lastName,
+                        social_id: value.social_id,
+                        provider: value.provider,
+                        isVerified: true
+                    });
+                    const token2 = jwt.issue({
+                        _id: user2._id
+                    }, '1d');
+                    const userInfo2 = {
+                        firstName: user2.firstName,
+                        lastName: user2.lastName,
+                        email: user2.email,
+                        role: user2.role,
+                        isVerified: user2.isVerified,
+                        token: token2
+                    };
+                    return res.status(200).json({
+                        user: userInfo2
+                    });
+
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            return res.status(500).json(err);
+        }
+    },
+    async socialRole(req, res) {
+        try {
+          const user = await User.findOneAndUpdate({social_id : req.body.social_id}, {$set : {role : req.body.role }});
+            if(user){
+                const userInfoy = {
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    email: user.email,
+                    role: user.role,
+                };
+                return res.status(200).json({
+                    user: userInfoy
+                });
+            }
+            else{
+                return res.status(404);
+            }
+
         } catch (err) {
             console.error(err);
             return res.status(500).json(err);
