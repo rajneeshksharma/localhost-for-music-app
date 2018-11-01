@@ -304,7 +304,7 @@ export default {
                     firstName: user.firstName,
                     lastName: user.lastName,
                     email: user.email,
-                    role: user.role,
+                    role: req.body.role,
                 };
                 return res.status(200).json({
                     user: userInfoy
