@@ -13,3 +13,4 @@ songRouter.route('/:id')
 .get(passport.authenticate('jwt',{session:false}),songController.findOne)
 .delete([passport.authenticate('jwt',{session:false}),isArtist],songController.delete)
 .put([passport.authenticate('jwt',{session:false}),isArtist],songController.update);
+songRouter.route('/search').post(passport.authenticate('jwt',{session:false}), songController.search);
