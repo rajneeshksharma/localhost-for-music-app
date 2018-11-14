@@ -98,12 +98,7 @@ export default {
             } = joi.validate(req.body, schema);
             if (error && error.details)
                 return res.status(400).json(error);
-
-            const song = await Song.findOneAndUpdate({
-                _id: id
-            }, value, {
-                new: true
-            });
+            const song = await Song.findOneAndUpdate({_id: id}, value, {new: true});
             if (!song)
                 return res.status(404).json({
                     error: "Song not found"
